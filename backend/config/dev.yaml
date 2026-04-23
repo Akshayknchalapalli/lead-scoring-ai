@@ -1,0 +1,4 @@
+environment: dev
+database_url: "postgresql://user:pass@localhost:5432/db_name"
+redis_url: "redis://localhost:6379/0"
+log_level: INFO
