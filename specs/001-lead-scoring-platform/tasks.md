@@ -18,11 +18,11 @@
 **Purpose**: Initialize backend and extension structure, dependencies, and baseline runtime configuration.
 
 - [X] T001 Create backend and extension skeleton directories per plan in `backend/` and `extension/`
-- [ ] T002 Initialize Python backend project dependencies in `backend/pyproject.toml`
-- [ ] T003 [P] Add environment profiles in `backend/config/dev.yaml` and `backend/config/prod.yaml`
-- [ ] T004 [P] Create base application entrypoint and wiring in `backend/src/api/app.py`
-- [ ] T005 [P] Add queue/runtime bootstrap configuration in `backend/src/config/runtime.py`
-- [ ] T006 [P] Add observability bootstrap scaffolding in `backend/src/observability/bootstrap.py`
+- [X] T002 Initialize Python backend project dependencies in `backend/pyproject.toml`
+- [X] T003 [P] Add environment profiles in `backend/config/dev.yaml` and `backend/config/prod.yaml`
+- [X] T004 [P] Create base application entrypoint and wiring in `backend/src/api/app.py`
+- [X] T005 [P] Add queue/runtime bootstrap configuration in `backend/src/config/runtime.py`
+- [X] T006 [P] Add observability bootstrap scaffolding in `backend/src/observability/bootstrap.py`
 - [ ] T068 [P] Add local/dev seed data loader for leads and events in `backend/scripts/seed_data.py`
 
 ---
@@ -33,7 +33,7 @@
 
 **⚠️ CRITICAL**: No user story implementation begins before this phase completes.
 
-- [ ] T007 Define core ORM entities from `data-model.md` in `backend/src/models/entities.py`
+- [X] T007 Define core ORM entities from `data-model.md` in `backend/src/models/entities.py`
 - [ ] T008 Create database migration for core entities and constraints in `backend/src/models/migrations/0001_initial.sql`
 - [ ] T009 [P] Implement repository base with mandatory tenant predicates in `backend/src/services/repositories/base_repository.py`
 - [ ] T010 [P] Implement model registry service for scope/version resolution in `backend/src/services/model_registry_service.py`

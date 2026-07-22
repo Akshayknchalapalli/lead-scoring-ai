@@ -13,5 +13,7 @@ dependencies = [
   "sqlalchemy",
   "pydantic",
   "redis",
+  "pyyaml",
   "pytest",
+  "alembic",
 ]

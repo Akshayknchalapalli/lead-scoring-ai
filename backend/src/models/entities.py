@@ -39,13 +39,22 @@ class ScoreCategory(str, Enum):
     HOT = "hot"
 
 
+def _enum_values(enum_cls: type[Enum]) -> list[str]:
+    return [member.value for member in enum_cls]
+
+
 class Lead(Base):
     __tablename__ = "leads"
 
     tenant_id: Mapped[str] = mapped_column(String, nullable=False)
     lead_id: Mapped[str] = mapped_column(String, nullable=False)
     lifecycle_state: Mapped[LeadLifecycleState] = mapped_column(
-        SQLEnum(LeadLifecycleState, name="lead_lifecycle_state", native_enum=False),
+        SQLEnum(
+            LeadLifecycleState,
+            name="lead_lifecycle_state",
+            native_enum=False,
+            values_callable=_enum_values,
+        ),
         nullable=False,
     )
     current_score_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -111,13 +120,23 @@ class ModelVersion(Base):
 
     model_version: Mapped[str] = mapped_column(String, primary_key=True)
     model_scope: Mapped[ModelScope] = mapped_column(
-        SQLEnum(ModelScope, name="model_scope", native_enum=False),
+        SQLEnum(
+            ModelScope,
+            name="model_scope",
+            native_enum=False,
+            values_callable=_enum_values,
+        ),
         nullable=False,
     )
     scope_key: Mapped[str | None] = mapped_column(String)
     trained_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[ModelStatus] = mapped_column(
-        SQLEnum(ModelStatus, name="model_status", native_enum=False),
+        SQLEnum(
+            ModelStatus,
+            name="model_status",
+            native_enum=False,
+            values_callable=_enum_values,
+        ),
         nullable=False,
     )
     training_window: Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -152,7 +171,12 @@ class LeadScore(Base):
     lead_id: Mapped[str] = mapped_column(String, nullable=False)
     score_probability: Mapped[float] = mapped_column(Float, nullable=False)
     score_category: Mapped[ScoreCategory] = mapped_column(
-        SQLEnum(ScoreCategory, name="score_category", native_enum=False),
+        SQLEnum(
+            ScoreCategory,
+            name="score_category",
+            native_enum=False,
+            values_callable=_enum_values,
+        ),
         nullable=False,
     )
     threshold_policy_version: Mapped[str] = mapped_column(String, nullable=False)
