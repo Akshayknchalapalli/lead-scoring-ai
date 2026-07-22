@@ -1,0 +1,417 @@
+openapi: 3.0.3
+info:
+  title: Lead Intelligence Scoring API
+  version: 1.0.0
+  description: Contracts for score retrieval, explanation requests, and tenant scoring controls.
+servers:
+  - url: https://api.example.com/v1
+security:
+  - bearerAuth: []
+paths:
+  /score/{lead_id}:
+    get:
+      summary: Get current score for a lead
+      description: Tenant scope is derived from bearer token claims.
+      parameters:
+        - in: path
+          name: lead_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Request-ID
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current score response
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadScoreResponse"
+              examples:
+                hotLead:
+                  value:
+                    lead_id: "lead_456"
+                    score_category: "hot"
+                    score_probability: 0.82
+                    model_version: "v3.2"
+                    score_ts: "2026-04-23T12:31:00Z"
+                    staleness_target_seconds: 300
+                    is_stale: false
+                    staleness_seconds: 0
+        "400":
+          description: Validation error
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Lead or score not found
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            Retry-After:
+              $ref: "#/components/headers/Retry-After"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /scores/batch:
+    post:
+      summary: Get scores for multiple leads
+      description: Tenant scope is derived from bearer token claims.
+      parameters:
+        - in: header
+          name: X-Request-ID
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lead_ids]
+              properties:
+                lead_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Batch score response
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scores]
+                properties:
+                  scores:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LeadScoreResponse"
+        "400":
+          description: Validation error
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            Retry-After:
+              $ref: "#/components/headers/Retry-After"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /explain/{lead_id}:
+    post:
+      summary: Generate or fetch explanation for a lead score
+      description: Tenant scope is derived from bearer token claims.
+      parameters:
+        - in: path
+          name: lead_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Request-ID
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Explanation response
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreExplanationResponse"
+        "503":
+          description: Explanation service unavailable with fallback guidance
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Explanation rate limit exceeded
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            Retry-After:
+              $ref: "#/components/headers/Retry-After"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tenant/scoring-policy:
+    patch:
+      summary: Update tenant scoring policy
+      description: Tenant scope is derived from bearer token claims.
+      parameters:
+        - in: header
+          name: X-Request-ID
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantScoringPolicyUpdate"
+      responses:
+        "200":
+          description: Updated tenant scoring policy
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantScoringPolicyResponse"
+        "400":
+          description: Validation error
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            Retry-After:
+              $ref: "#/components/headers/Retry-After"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  headers:
+    X-Request-ID:
+      description: Request correlation identifier echoed by service.
+      schema:
+        type: string
+    X-RateLimit-Limit:
+      description: Max requests allowed in current window.
+      schema:
+        type: integer
+    X-RateLimit-Remaining:
+      description: Remaining requests in current window.
+      schema:
+        type: integer
+    Retry-After:
+      description: Seconds until client should retry.
+      schema:
+        type: integer
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error_code
+        - message
+        - request_id
+      properties:
+        error_code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+    LeadScoreResponse:
+      type: object
+      required:
+        - lead_id
+        - score_category
+        - score_probability
+        - model_version
+        - score_ts
+        - is_stale
+        - staleness_target_seconds
+        - staleness_seconds
+      properties:
+        lead_id:
+          type: string
+        score_category:
+          type: string
+          enum: [cold, warm, hot]
+        score_probability:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        model_version:
+          type: string
+        score_ts:
+          type: string
+          format: date-time
+        is_stale:
+          type: boolean
+        staleness_target_seconds:
+          type: integer
+          minimum: 0
+        staleness_seconds:
+          type: integer
+          minimum: 0
+    ScoreExplanationResponse:
+      type: object
+      required:
+        - lead_id
+        - summary
+        - top_signals
+        - recommended_action
+        - cached
+      properties:
+        lead_id:
+          type: string
+        summary:
+          type: string
+        top_signals:
+          type: array
+          items:
+            type: string
+        recommended_action:
+          type: string
+        cached:
+          type: boolean
+    TenantScoringPolicyUpdate:
+      type: object
+      properties:
+        scoring_enabled:
+          type: boolean
+        threshold_cold_max:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        threshold_hot_min:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+    TenantScoringPolicyResponse:
+      type: object
+      required:
+        - tenant_id
+        - scoring_enabled
+        - threshold_cold_max
+        - threshold_hot_min
+        - policy_version
+      properties:
+        tenant_id:
+          type: string
+        scoring_enabled:
+          type: boolean
+        threshold_cold_max:
+          type: number
+          format: float
+        threshold_hot_min:
+          type: number
+          format: float
+        policy_version:
+          type: string
