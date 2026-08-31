@@ -6,3 +6,7 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
+
+# POC generated artifacts (PII-derived data, binary models) - regenerate via run_poc_pipeline.py
+backend/data/poc/
+backend/models/poc/

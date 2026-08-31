@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "POC: Run server (uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": ["poc.api.app:app", "--reload"],
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "PYTHONPATH": "src"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "POC: Run pipeline (run_poc_pipeline.py)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/scripts/run_poc_pipeline.py",
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "PYTHONPATH": "src"
+            },
+            "justMyCode": true
+        }
+    ]
+}

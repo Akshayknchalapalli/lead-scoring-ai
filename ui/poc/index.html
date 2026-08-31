@@ -1,0 +1,194 @@
+<title>Lead Scoring POC</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --hot: #e5484d;
+    --warm: #f5a623;
+    --cold: #6b7785;
+    --border: #d8dee4;
+    --bg-muted: #f6f8fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --border: #333; --bg-muted: #1c1f24; }
+    body { background: #0f1115; color: #e6e6e6; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    margin: 0;
+    padding: 24px;
+    max-width: 960px;
+    margin-inline: auto;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: 4px; }
+  .subtitle { color: #6b7785; margin-top: 0; margin-bottom: 20px; font-size: 0.9rem; }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-muted);
+    margin-bottom: 16px;
+  }
+  select {
+    font-size: 0.95rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 0.9rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: #6b7785; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .badge.hot { background: var(--hot); }
+  .badge.warm { background: var(--warm); }
+  .badge.cold { background: var(--cold); }
+  .badge.none { background: transparent; color: #6b7785; border: 1px dashed var(--border); }
+  button.explain-btn {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+  }
+  button.explain-btn:hover { background: var(--bg-muted); }
+  .empty-state { padding: 24px; text-align: center; color: #6b7785; }
+  dialog {
+    max-width: 480px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 20px;
+  }
+  dialog::backdrop { background: rgba(0,0,0,0.4); }
+  dialog h3 { margin-top: 0; }
+  dialog ul { padding-left: 20px; }
+  dialog .action { margin-top: 12px; padding: 10px; background: var(--bg-muted); border-radius: 6px; font-size: 0.9rem; }
+  dialog button.close-btn { margin-top: 16px; }
+  .switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background-color: #ccc; transition: .2s; border-radius: 20px; }
+  .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+  input:checked + .slider { background-color: #2f9e44; }
+  input:checked + .slider:before { transform: translateX(18px); }
+</style>
+
+<h1>Lead Scoring POC</h1>
+<p class="subtitle">Real historical lead data, real conversion labels, leakage-checked model. Not the production event-driven architecture &mdash; see poc/spec.md.</p>
+
+<div class="toolbar">
+  <label for="tenant-select">Tenant</label>
+  <select id="tenant-select"></select>
+  <div class="toggle-row">
+    <label class="switch">
+      <input type="checkbox" id="scoring-toggle" />
+      <span class="slider"></span>
+    </label>
+    <span id="toggle-label">Scoring enabled</span>
+  </div>
+</div>
+
+<table id="leads-table">
+  <thead>
+    <tr><th>Lead ID</th><th>Lead Score</th><th>Category</th><th></th></tr>
+  </thead>
+  <tbody id="leads-body"></tbody>
+</table>
+<div id="empty-state" class="empty-state" style="display:none;">No leads to show for this tenant.</div>
+
+<dialog id="explain-dialog">
+  <h3>Why this score?</h3>
+  <p id="explain-summary"></p>
+  <ul id="explain-signals"></ul>
+  <div class="action" id="explain-action"></div>
+  <button class="close-btn" onclick="document.getElementById('explain-dialog').close()">Close</button>
+</dialog>
+
+<script>
+  const tenantSelect = document.getElementById('tenant-select');
+  const scoringToggle = document.getElementById('scoring-toggle');
+  const toggleLabel = document.getElementById('toggle-label');
+  const leadsBody = document.getElementById('leads-body');
+  const emptyState = document.getElementById('empty-state');
+  const dialog = document.getElementById('explain-dialog');
+
+  async function loadTenants() {
+    const res = await fetch('/poc/tenants');
+    const tenants = await res.json();
+    tenantSelect.innerHTML = tenants
+      .map(t => `<option value="${t.tenant_id}">${t.tenant_id}</option>`)
+      .join('');
+    return tenants;
+  }
+
+  async function loadLeads(tenantId) {
+    const res = await fetch(`/poc/leads?tenant_id=${encodeURIComponent(tenantId)}&limit=200`);
+    const data = await res.json();
+    scoringToggle.checked = data.scoring_enabled;
+    toggleLabel.textContent = data.scoring_enabled ? 'Scoring enabled' : 'Scoring disabled';
+
+    leadsBody.innerHTML = '';
+    emptyState.style.display = data.leads.length ? 'none' : 'block';
+
+    for (const lead of data.leads) {
+      const row = document.createElement('tr');
+      const category = lead.score_category || 'none';
+      const scoreText = lead.lead_score != null ? lead.lead_score + '/100' : '—';
+      const rawTitle = lead.score_probability != null
+        ? `Raw predicted probability: ${(lead.score_probability * 100).toFixed(4)}%`
+        : '';
+      row.innerHTML = `
+        <td>${lead.lead_id}</td>
+        <td title="${rawTitle}">${scoreText}</td>
+        <td><span class="badge ${category}">${category.toUpperCase()}</span></td>
+        <td><button class="explain-btn" ${lead.score_probability == null ? 'disabled' : ''}>Explain</button></td>
+      `;
+      row.querySelector('.explain-btn').addEventListener('click', () => explainLead(tenantId, lead.lead_id));
+      leadsBody.appendChild(row);
+    }
+  }
+
+  async function explainLead(tenantId, leadId) {
+    const res = await fetch(`/poc/leads/${encodeURIComponent(leadId)}/explain?tenant_id=${encodeURIComponent(tenantId)}`, {
+      method: 'POST',
+    });
+    const data = await res.json();
+    document.getElementById('explain-summary').textContent = data.summary;
+    document.getElementById('explain-signals').innerHTML = data.top_signals.map(s => `<li>${s}</li>`).join('');
+    document.getElementById('explain-action').textContent = 'Recommended next action: ' + data.recommended_action;
+    dialog.showModal();
+  }
+
+  async function toggleScoring() {
+    const tenantId = tenantSelect.value;
+    const enabled = scoringToggle.checked;
+    await fetch(`/poc/tenants/${encodeURIComponent(tenantId)}/scoring-policy`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scoring_enabled: enabled }),
+    });
+    await loadLeads(tenantId);
+  }
+
+  tenantSelect.addEventListener('change', () => loadLeads(tenantSelect.value));
+  scoringToggle.addEventListener('change', toggleScoring);
+
+  (async () => {
+    const tenants = await loadTenants();
+    if (tenants.length) {
+      tenantSelect.value = tenants[0].tenant_id;
+      await loadLeads(tenants[0].tenant_id);
+    }
+  })();
+</script>

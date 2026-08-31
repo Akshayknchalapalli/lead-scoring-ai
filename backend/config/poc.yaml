@@ -1,0 +1,19 @@
+csv_files:
+  - "C:/Users/aksha/Downloads/data-1776891244155.csv"
+  - "C:/Users/aksha/Downloads/data-1776891157362.csv"
+  - "C:/Users/aksha/Downloads/data-1776891100282.csv"
+  - "C:/Users/aksha/Downloads/data-1776891037923.csv"
+  - "C:/Users/aksha/Downloads/data-1776713795562.csv"
+data_dir: "data/poc"
+model_dir: "models/poc"
+database_url: "sqlite:///data/poc/poc.db"
+top_tenants:
+  - blissrealty
+  - propmart
+  - lifespacepropertysolution
+  - prdblack
+  - assettrustservices
+hot_percentile: 0.90
+warm_percentile: 0.60
+model_version: "poc-v1"
+log_level: INFO

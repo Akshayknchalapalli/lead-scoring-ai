@@ -17,10 +17,11 @@ These are five ~10,000-row pages of what is effectively one export (49,830 uniqu
    - **No per-version timestamps exist inside these blobs.** We only have overall `CreatedDate`, `ModifiedDate`, and the `CurrentVersion` counter. Precise event-time cutoff enforcement (as `spec.md` FR-012 assumes) is not reconstructable from this export at per-field granularity — a POC has to use `ModifiedDate`/transition-count as a proxy, and this limitation should be stated plainly, not hidden.
    - **Do not trust a naive `notna()` check on these columns.** Every row has a non-null JSON string (even when the real value is null), so `BookedDate.notna()` reports 42,553/50,000 — the correct number, after parsing, is **156**.
 
-3. **Conversion label is real and very rare.** Using the spec's own rule (FR-011: `BookedDate` present or `SoldPrice > 0`, after JSON-parsing):
-   - **162 / 50,000 leads (0.32%) are "converted".**
-   - Label sanity-checks against status text: current `BaseLeadStatus = "Booked"` → 121 converted vs 14 not; `"Booking Cancel"` → 4 converted vs 33 not (matches the spec's cancelled/reverted-booking clarification, FR-011/FR-019 — cancelled bookings mostly correctly fall on the non-converted side).
-   - This is a heavy class imbalance (~1:300). A POC model needs class-weighting (e.g. XGBoost `scale_pos_weight`) and should not use the spec's default 0.40/0.80 probability thresholds as-is (those assume a different label prevalence) — POC will derive Hot/Warm/Cold cutoffs from score percentiles instead, and flag this as a business decision to revisit, not a finished calibration.
+3. **Conversion label is real and very rare.** Using the spec's raw rule (FR-011: `BookedDate` present or `SoldPrice > 0`, after JSON-parsing):
+   - **162 / 49,830 unique leads (0.32%) have a booking/sale signal.**
+   - Label sanity-check against status text: current `BaseLeadStatus = "Booked"` → 121 with-signal vs 14 without; `"Booking Cancel"` → 4 with-signal vs 33 without.
+   - Applying the full FR-011/FR-019 rule (cancelled/reverted bookings are non-converted unless a later valid booking occurred) removes those 4 `"Booking Cancel"` leads that still carry a stale `BookedDate`/`SoldPrice` from before cancellation — since current status *is* "Booking Cancel", no later valid booking exists, so these must not count as converted. **Final POC label: 158 / 49,830 positives (0.317%).** (Implemented in `backend/src/poc/etl/label.py`.)
+   - This is a heavy class imbalance (~1:315). A POC model needs class-weighting (e.g. XGBoost `scale_pos_weight`) and should not use the spec's default 0.40/0.80 probability thresholds as-is (those assume a different label prevalence) — POC will derive Hot/Warm/Cold cutoffs from score percentiles instead, and flag this as a business decision to revisit, not a finished calibration.
 
 4. **PII columns present, must be excluded from model features / explanation text** (per FR-028): `Name`, `Email`, `ContactNo`, `AlternateContactNo`, `ReferralContactNo`, `ReferralName`, `LandLine`, `DateOfBirth`, `ConfidentialNotes`, free-text `Notes`.
 
@@ -34,6 +35,19 @@ These are five ~10,000-row pages of what is effectively one export (49,830 uniqu
    - Status-transition count (number of keys in `BaseLeadStatus` / `CurrentVersion`) as an activity-volume proxy.
 
 6. **`Rating`, `IsHotLead`/`IsWarmLead`/`IsColdLead` are not usable as ground truth** for the model to predict — they're almost universally unset/false (e.g. `IsHotLead` true for only 7 rows) and represent ad hoc manual tags on a handful of leads, not a consistent taxonomy across tenants. The POC model must derive its own Hot/Warm/Cold from predicted booking probability, independent of these fields.
+
+## Implementation finding: `current_status` is target leakage, not a feature
+First training pass included the lead's current status text (`BaseLeadStatus`, last value) as a
+categorical feature and got a suspiciously high AUC (0.988). Feature importance showed why:
+`current_status` alone accounted for 84% of the model's decisions, and its values are near-synonymous
+with the label — `"Booking Done"`/`"Invoiced"` are 100% converted, `"Booked"` is 89.6% converted. The
+model was mostly just reading the outcome back off a differently-named copy of itself, not predicting
+intent. Removed `current_status`/`current_sub_status` from model inputs (kept as display-only fields
+for the API/UI, per `feature_spec.py`'s `DISPLAY_ONLY_FEATURES`); retrained AUC dropped to a much more
+credible **0.699**, driven by real engagement signals instead (`tenant_id`, `has_scheduled_meeting`,
+`is_site_visit_done`, `is_picked`, `is_meeting_done`, `lead_source_code`). This is exactly the kind of
+leakage the full spec's FR-009/FR-012/SC-006 are designed to prevent — worth mentioning in the CTO
+demo as a concrete example of the leakage-control discipline working, not just a policy on paper.
 
 ## Implication for POC architecture
 The dataset is a historical snapshot, not a live event stream. The POC is a **batch ETL → train → score → serve** pipeline, not the event-driven/queue/cache architecture in the full `plan.md`. That's the correct scope cut, not a shortcut — see `poc/spec.md`.
