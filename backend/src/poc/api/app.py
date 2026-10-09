@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from observability.logging import setup_logging
 from interview_demo.api import router as advisor_router
+from order_demo.controller import router as order_router
 from poc.api import lead_routes, tenant_routes
 from poc.config import load_poc_config
 
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
     app.include_router(tenant_routes.router)
     # Register before the root static mount so /demo and /demo/run reach the advisor.
     app.include_router(advisor_router)
+    app.include_router(order_router)
 
     if UI_DIR.exists():
         app.mount("/", StaticFiles(directory=str(UI_DIR), html=True), name="ui")

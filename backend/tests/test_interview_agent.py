@@ -124,6 +124,7 @@ def test_advisor_routes_precede_original_dashboard_mount(tmp_path, monkeypatch):
         assert '<h1>Lead Scoring POC</h1>' in dashboard.text
         assert 'href="/demo"' in dashboard.text
         assert client.get("/demo").text == api.home()
+        assert client.get("/orders-demo").status_code == 200
         response = client.post("/demo/run", json={"lead_id": "meeting-1"})
         assert response.status_code == 200
         assert response.json()["action"] == "confirm_meeting"

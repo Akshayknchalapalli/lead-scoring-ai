@@ -68,3 +68,7 @@ The repository has two startup commands. They serve different home pages:
 | `uvicorn poc.api.app:app` | Original scoring dashboard | `/demo` or the dashboard link | Full backend dependencies |
 
 To use the original dashboard, install `python -m pip install -e backend`, then start `uvicorn poc.api.app:app --host 127.0.0.1 --port 8000` with `PYTHONPATH=backend/src`. The dashboard's scoring API still requires generated POC data/model artifacts; the `/demo` advisor uses independent synthetic fixtures. Both apps now expose the same advisor HTML and `/demo/run` endpoint. Stop the existing server before switching startup commands on port 8000.
+
+## Learn model placement using a familiar order application
+
+Open `/orders-demo` on either server. This separate example follows controller → service → repository → real SQLite, then service → deterministic model simulator → response. It shows each intermediate payload in the browser. No real language model runs, and no additional demo dependencies are needed. Read [the step-by-step order walkthrough](docs/order-demo-walkthrough.md).

@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from interview_demo.agent import run_agent
+from order_demo.controller import router as order_router
 
 app = FastAPI(title="Lead Advisor — Interview Demo")
 router = APIRouter(prefix="/demo", tags=["interview advisor"])
@@ -26,4 +27,5 @@ def home():
 
 
 app.include_router(router)
+app.include_router(order_router)
 app.add_api_route("/", home, response_class=HTMLResponse, include_in_schema=False)
