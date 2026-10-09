@@ -13,8 +13,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: backend/requirements-demo.txt
-      - name: Install isolated demo dependencies
-        run: pip install -r backend/requirements-demo.txt
+      - name: Install demo and POC integration dependencies
+        run: pip install -r backend/requirements-demo.txt -e backend
       - name: Run tests and regression scenarios
         env:
           PYTHONPATH: backend/src

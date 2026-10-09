@@ -17,7 +17,7 @@ uvicorn interview_demo.api:app --host 127.0.0.1 --port 8000
 
 On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`, then set `$env:PYTHONPATH="backend/src"` and `$env:DEMO_PROVIDER="offline"`.
 
-Open http://127.0.0.1:8000. Select a tenant and lead, run the advisor, inspect its trace, and download JSON evidence. The API explorer is at http://127.0.0.1:8000/docs.
+Open http://127.0.0.1:8000 (or http://127.0.0.1:8000/demo). Select a tenant and lead, run the advisor, inspect its trace, and download JSON evidence. The API explorer is at http://127.0.0.1:8000/docs.
 
 **Offline mode uses a deterministic test double, not an LLM. Scores are synthetic fixtures, not trained predictions.** The workflow itself uses LangGraph in both modes. This is a bounded, read-only workflow with code-enforced actions; the model does not autonomously choose tools or modify CRM records.
 
@@ -45,7 +45,7 @@ pytest backend/tests -q --junitxml=artifacts/junit.xml
 python -m interview_demo.evaluate --output artifacts/regression
 ```
 
-Tests check expected actions, tenant boundaries, invalid outputs, bounded retries, evidence persistence, and API validation. The scenario runner writes a Markdown report, a JSON report, and per-run JSON evidence. Failures return a nonzero exit code. CI uploads these artifacts and no longer suppresses pytest failures.
+Tests check expected actions, tenant boundaries, invalid outputs, bounded retries, evidence persistence, and API validation. The original POC route integration test additionally requires `pip install -e backend`; it skips in demo-only environments and runs in CI. The scenario runner writes a Markdown report, a JSON report, and per-run JSON evidence. Failures return a nonzero exit code. CI uploads these artifacts and no longer suppresses pytest failures.
 
 To evaluate the actual model, run the same scenario runner with `DEMO_PROVIDER=ollama`. Compare failures and run evidence before revising a prompt; do not interpret offline passes as proof of model robustness.
 
@@ -57,3 +57,14 @@ To evaluate the actual model, run the same scenario runner with `DEMO_PROVIDER=o
 - [Architecture](docs/architecture/README.md)
 
 Run the demo on localhost with synthetic data. Tenant selection tests lookup scoping; it is **not authentication**. Production integration needs authenticated tenant context, persistent access-controlled audit storage, and an adapter to the actual scoring service. The current demo does not claim RAG, autonomous tool calling, production readiness, or measured conversion uplift.
+
+## Original scoring dashboard and advisor in one server
+
+The repository has two startup commands. They serve different home pages:
+
+| Command | Home page | Advisor page | Dependencies |
+|---|---|---|---|
+| `uvicorn interview_demo.api:app` | Synthetic advisor | `/demo` | Demo requirements only |
+| `uvicorn poc.api.app:app` | Original scoring dashboard | `/demo` or the dashboard link | Full backend dependencies |
+
+To use the original dashboard, install `python -m pip install -e backend`, then start `uvicorn poc.api.app:app --host 127.0.0.1 --port 8000` with `PYTHONPATH=backend/src`. The dashboard's scoring API still requires generated POC data/model artifacts; the `/demo` advisor uses independent synthetic fixtures. Both apps now expose the same advisor HTML and `/demo/run` endpoint. Stop the existing server before switching startup commands on port 8000.

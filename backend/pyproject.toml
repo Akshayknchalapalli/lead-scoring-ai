@@ -9,6 +9,7 @@ description = "Backend service for lead scoring platform."
 requires-python = ">=3.10"
 dependencies = [
   "fastapi",
+  "langgraph>=1,<2",
   "uvicorn[standard]",
   "sqlalchemy",
   "pydantic",

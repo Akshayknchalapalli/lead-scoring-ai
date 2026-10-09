@@ -72,6 +72,7 @@ def test_api_and_input_validation(tmp_path, monkeypatch):
     monkeypatch.setattr(api, "EVIDENCE_DIR", tmp_path)
     with TestClient(api.app) as client:
         assert client.get("/").status_code == 200
+        assert client.get("/demo").text == client.get("/").text
         response = client.post("/demo/run", json={"lead_id": "meeting-1"})
         assert response.status_code == 200
         assert response.json()["action"] == "confirm_meeting"
@@ -110,3 +111,19 @@ def test_report_detects_policy_regression(monkeypatch, tmp_path):
     report = evaluate(tmp_path)
     failing = [r["scenario"] for r in report["results"] if not r["passed"]]
     assert failing == ["meeting-precedence"]
+
+def test_advisor_routes_precede_original_dashboard_mount(tmp_path, monkeypatch):
+    pytest.importorskip("sqlalchemy", reason="Full POC integration requires pip install -e backend")
+    pytest.importorskip("pandas", reason="Full POC integration requires pip install -e backend")
+    pytest.importorskip("xgboost", reason="Full POC integration requires pip install -e backend")
+    from poc.api.app import create_app
+    monkeypatch.setattr(api, "EVIDENCE_DIR", tmp_path)
+    with TestClient(create_app()) as client:
+        dashboard = client.get("/")
+        assert dashboard.status_code == 200
+        assert '<h1>Lead Scoring POC</h1>' in dashboard.text
+        assert 'href="/demo"' in dashboard.text
+        assert client.get("/demo").text == api.home()
+        response = client.post("/demo/run", json={"lead_id": "meeting-1"})
+        assert response.status_code == 200
+        assert response.json()["action"] == "confirm_meeting"
