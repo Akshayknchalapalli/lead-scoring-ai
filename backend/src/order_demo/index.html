@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order Support · Learn the Layers</title>
+<style>
+*{box-sizing:border-box}body{font:16px system-ui;color:#2e3047;background:#f4f5fa;max-width:1100px;margin:32px auto;padding:20px}section{background:#fff;border:1px solid #dde0eb;border-radius:12px;padding:20px;margin:18px 0}h1{margin-bottom:8px}label{display:block;margin:12px 0}select,textarea,button{font:inherit;padding:10px;border:1px solid #bbb;border-radius:6px}textarea{width:100%}button{background:#2e3047;color:white;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f5fa;padding:14px;font:13px ui-monospace,monospace}small{color:#555}.columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}#answer{font-size:20px}a{color:#2e3047}@media(max-width:700px){.columns{grid-template-columns:1fr}}li{margin:8px 0}
+</style>
+<a href="/demo">Lead advisor demo</a>
+<h1>Order support: follow one request through the layers</h1>
+<p>Controller → Service → Repository → SQLite. Then Service → Demo model client → Response.</p>
+<small>Real HTTP request and SQLite query. The model is a deterministic simulator, with no real inference. Customer selection is for learning and does not implement authentication. All records are synthetic.</small>
+<section><label>Demo customer <select id="customer"><option>demo-a</option><option>demo-b</option></select></label>
+<label>Order <select id="order"><option value="104">104 · Shipped, no tracking</option><option value="105">105 · Processing</option><option value="106">106 · Delivered</option><option value="107">107 · Shipped, tracking available</option><option value="999">999 · Missing order</option></select></label>
+<small>The labels describe demo-a fixtures. demo-b has only order 104, with PROCESSING status.</small>
+<label>Your question <textarea id="question">Has my order shipped? What is my tracking number?</textarea></label>
+<button id="ask">Send request</button></section>
+<section aria-live="polite"><strong>Customer answer</strong><p id="answer">Run order 104 first.</p><small id="mode"></small></section>
+<div class="columns"><section><strong>1. Controller receives</strong><pre id="request">Request JSON appears here.</pre></section><section><strong>2. Repository returns from SQLite</strong><pre id="database">Database facts appear here.</pre></section><section><strong>3. Service sends to model client</strong><pre id="input">Instructions + question + order facts appear here.</pre></section><section><strong>4. Model client returns</strong><pre id="output">Simulated response appears here.</pre></section></div>
+<section><strong>Execution steps</strong><ol id="trace"></ol></section>
+<script>
+const byId=id=>document.getElementById(id);byId('ask').onclick=async()=>{const button=byId('ask');button.disabled=true;const payload={customer_id:byId('customer').value,order_id:Number(byId('order').value),question:byId('question').value};byId('request').textContent=JSON.stringify(payload,null,2);for(const id of ['database','input','output'])byId(id).textContent='';byId('trace').replaceChildren();byId('mode').textContent='';byId('answer').textContent='Running…';try{const response=await fetch('/orders-demo/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!response.ok)throw Error('Request rejected: '+response.status);const result=await response.json();byId('answer').textContent=result.answer;byId('mode').textContent='Provider: '+result.provider+' · Run: '+result.run_id;byId('database').textContent=JSON.stringify(result.database_result,null,2);byId('input').textContent=JSON.stringify(result.model_input,null,2);byId('output').textContent=result.model_output??'Model skipped: no scoped order facts.';for(const step of result.trace){const li=document.createElement('li');li.textContent=step.layer+' → '+step.event;byId('trace').appendChild(li);}}catch(error){byId('answer').textContent=error.message;}finally{button.disabled=false;}};
+</script></html>

@@ -10,3 +10,10 @@ venv/
 # POC generated artifacts (PII-derived data, binary models) - regenerate via run_poc_pipeline.py
 backend/data/poc/
 backend/models/poc/
+
+# Local demo run evidence
+artifacts/
+backend/artifacts/
+
+# Named local virtual environments
+.venv-*/
